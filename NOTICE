@@ -1,0 +1,9 @@
+cpu_observer
+Copyright 2022 JmPotato ghzpotato@gmail.com
+
+This project references and modifies most of the code from resource_metering (https://github.com/tikv/tikv/tree/master/components/resource_metering)
+and tikv_util (https://github.com/tikv/tikv/tree/master/components/tikv_util) components of the TiKV project (https://github.com/tikv/tikv).
+
+The Initial Developer of some parts of the framework, which are copied from, derived from, or
+inspired by Zhenchi Zhong (via PingCAP), is TiKV project (https://github.com/tikv/tikv).
+Copyright 2021 TiKV Project Authors.
