@@ -105,7 +105,7 @@ impl<T: Display + Send> Scheduler<T> {
         Ok(())
     }
 
-    pub fn stop(&self) {
+    pub fn _stop(&self) {
         self.task_sender.close_channel();
     }
 }
@@ -143,12 +143,6 @@ impl<S: Into<String>> Builder<S> {
         self
     }
 
-    #[must_use]
-    pub fn thread_count(mut self, thread_count: usize) -> Self {
-        self.thread_count = thread_count;
-        self
-    }
-
     pub fn create(self) -> Worker {
         let pool = yatp::Builder::new(self.name.into())
             .core_thread_count(self.thread_count)
@@ -157,7 +151,7 @@ impl<S: Into<String>> Builder<S> {
             .build_future_pool();
         let remote = pool.remote().clone();
         Worker {
-            pool: Arc::new(Mutex::new(Some(pool))),
+            _pool: Arc::new(Mutex::new(Some(pool))),
             remote,
             task_counter: Arc::new(AtomicUsize::new(0)),
             pending_capacity: self.pending_capacity,
@@ -167,7 +161,7 @@ impl<S: Into<String>> Builder<S> {
 
 #[derive(Clone)]
 pub struct Worker {
-    pool: Arc<Mutex<Option<ThreadPool<TaskCell>>>>,
+    _pool: Arc<Mutex<Option<ThreadPool<TaskCell>>>>,
     remote: Remote<TaskCell>,
     task_counter: Arc<AtomicUsize>,
     pending_capacity: usize,
@@ -227,8 +221,8 @@ impl Worker {
         });
     }
 
-    fn stop(&self) {
-        if let Some(pool) = self.pool.lock().unwrap().take() {
+    fn _stop(&self) {
+        if let Some(pool) = self._pool.lock().unwrap().take() {
             pool.shutdown();
         }
     }
@@ -256,9 +250,9 @@ impl<T: Display + Send + 'static> LazyWorker<T> {
         self.scheduler.clone()
     }
 
-    pub fn stop(&mut self) {
-        self.scheduler.stop();
-        self.worker.stop()
+    pub fn _stop(&mut self) {
+        self.scheduler._stop();
+        self.worker._stop()
     }
 }
 

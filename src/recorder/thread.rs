@@ -287,14 +287,6 @@ mod imp {
             })
         }
     }
-
-    pub fn set_priority(_: i32) -> io::Result<()> {
-        Ok(())
-    }
-
-    pub fn get_priority() -> io::Result<i32> {
-        Ok(0)
-    }
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
@@ -339,14 +331,6 @@ mod imp {
     pub fn full_thread_stat(_pid: Pid, _tid: Pid) -> io::Result<FullStat> {
         Ok(FullStat::default())
     }
-
-    pub fn set_priority(_: i32) -> io::Result<()> {
-        Ok(())
-    }
-
-    pub fn get_priority() -> io::Result<i32> {
-        Ok(0)
-    }
 }
 
 pub use self::imp::*;
@@ -357,10 +341,6 @@ pub fn thread_stat(pid: Pid, tid: Pid) -> io::Result<ThreadStat> {
         s_time: full_stat.stime as _,
         u_time: full_stat.utime as _,
     })
-}
-
-pub fn current_thread_stat() -> io::Result<ThreadStat> {
-    thread_stat(process_id(), thread_id())
 }
 
 #[cfg(test)]
