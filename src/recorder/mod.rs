@@ -14,10 +14,14 @@ use crate::worker::Builder as WorkerBuilder;
 use crate::worker::Runnable;
 use crate::{Collector, ObserverTagFactory};
 
-use self::collector_reg::{CollectorId, CollectorReg, CollectorRegHandle};
+pub use self::collector_reg::{CollectorGuard, CollectorId, CollectorReg, CollectorRegHandle};
 use self::sub_recorder::{CPURecorder, SubRecorder};
 use self::thread::Pid;
 
+// TODO: make the recording frequency configurable.
+const RECORD_FREQUENCY: f64 = 99.0;
+const RECORD_INTERVAL: Duration =
+    Duration::from_micros((1_000.0 / RECORD_FREQUENCY * 1_000.0) as _);
 const RECORD_LEN_THRESHOLD: usize = 20_000;
 const CLEANUP_INTERVAL_SECS: u64 = 15 * 60;
 
@@ -164,7 +168,7 @@ impl Runnable for Recorder {
     }
 
     fn get_interval(&self) -> Duration {
-        Duration::from_millis(0)
+        RECORD_INTERVAL
     }
 
     fn shutdown(&mut self) {
@@ -223,15 +227,14 @@ impl RecorderBuilder {
 }
 
 pub fn init_recorder(
+    name: impl Into<String>,
     collect_interval_ms: u64,
-    cleanup_interval_second: u64,
 ) -> (ObserverTagFactory, CollectorRegHandle) {
     let recorder = RecorderBuilder::default()
         .collect_interval_ms(collect_interval_ms)
-        .cleanup_interval_second(cleanup_interval_second)
         .add_sub_recorder(Box::new(CPURecorder::default()))
         .build();
-    let mut recorder_worker = WorkerBuilder::new("cpu-observer-recorder")
+    let mut recorder_worker = WorkerBuilder::new(name.into())
         .pending_capacity(256)
         .create()
         .lazy_build();

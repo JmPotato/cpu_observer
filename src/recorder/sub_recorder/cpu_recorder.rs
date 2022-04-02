@@ -23,6 +23,7 @@ impl SubRecorder for CPURecorder {
         let records = &mut records.records;
         let pid = thread::process_id();
         self.thread_stats.iter_mut().for_each(|(tid, thread_stat)| {
+            // TODO: more precise CPU usage calculation when covering multiply tags.
             let cur_tag = thread_stat.attached_tag.load_full();
             if let Some(cur_tag) = cur_tag {
                 if let Ok(cur_stat) = thread::thread_stat(pid, *tid) {

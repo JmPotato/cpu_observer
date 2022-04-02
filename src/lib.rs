@@ -6,15 +6,16 @@ mod record;
 mod recorder;
 mod worker;
 
-pub use collector::Collector;
-pub use recorder::{init_recorder, Recorder, RecorderBuilder};
-
-use recorder::thread;
-use worker::Scheduler;
-
 use std::{intrinsics::unlikely, sync::Arc};
 
 use local_storage::{LocalStorage, LocalStorageRef, STORAGE};
+
+pub use crate::collector::Collector;
+use crate::recorder::thread;
+pub use crate::recorder::{
+    init_recorder, CollectorGuard, CollectorRegHandle, Recorder, RecorderBuilder,
+};
+use crate::worker::Scheduler;
 
 const MAX_THREAD_REGISTER_RETRY: u32 = 10;
 
@@ -96,9 +97,9 @@ impl ObserverTagFactory {
         Self { scheduler }
     }
 
-    pub fn new_tag(&self) -> ObserverTag {
+    pub fn new_tag(&self, name: impl Into<String>) -> ObserverTag {
         ObserverTag {
-            infos: Arc::new(TagInfos::default()),
+            infos: Arc::new(TagInfos { name: name.into() }),
             observer_tag_factory: self.clone(),
         }
     }

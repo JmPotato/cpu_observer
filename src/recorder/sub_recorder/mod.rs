@@ -1,11 +1,10 @@
-pub mod cpu_recorder;
-
-pub use cpu_recorder::CPURecorder;
+mod cpu_recorder;
 
 use crate::local_storage::LocalStorage;
 use crate::record::Records;
+use crate::recorder::thread::Pid;
 
-use super::thread::Pid;
+pub use self::cpu_recorder::CPURecorder;
 
 pub trait SubRecorder: Send {
     fn tick(&mut self, _records: &mut Records);
