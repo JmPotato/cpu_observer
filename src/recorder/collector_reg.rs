@@ -24,7 +24,7 @@ impl CollectorRegHandle {
     /// deregister the corresponding collector.
     pub fn register(&self, collector: Box<dyn Collector>) -> CollectorGuard {
         static NEXT_COLLECTOR_ID: AtomicU64 = AtomicU64::new(1);
-        let id = CollectorId(NEXT_COLLECTOR_ID.fetch_add(1, Ordering::SeqCst));
+        let id = CollectorID(NEXT_COLLECTOR_ID.fetch_add(1, Ordering::SeqCst));
 
         let reg_msg = Task::CollectorReg(CollectorReg::Register { collector, id });
         match self.scheduler.schedule(reg_msg) {
@@ -41,20 +41,20 @@ impl CollectorRegHandle {
 }
 
 #[derive(Copy, Clone, Default, Debug, Eq, PartialEq, Hash)]
-pub struct CollectorId(pub u64);
+pub struct CollectorID(pub u64);
 
 pub enum CollectorReg {
     Register {
-        id: CollectorId,
+        id: CollectorID,
         collector: Box<dyn Collector>,
     },
     Deregister {
-        id: CollectorId,
+        id: CollectorID,
     },
 }
 
 pub struct CollectorGuard {
-    id: CollectorId,
+    id: CollectorID,
     tx: Option<Scheduler<Task>>,
 }
 

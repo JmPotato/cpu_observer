@@ -108,9 +108,7 @@ mod tests {
 
     #[test]
     fn test_record() {
-        let info = Arc::new(TagInfos {
-            name: "test".to_string(),
-        });
+        let info = Arc::new(TagInfos::default());
         let store = LocalStorage {
             attached_tag: SharedTagInfos::new(info),
             ..Default::default()

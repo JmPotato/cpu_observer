@@ -1,12 +1,9 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
+use crate::util::now_unix_time;
 use crate::TagInfos;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct Records {
     pub begin_unix_time_secs: u64,
     pub duration: Duration,
@@ -17,18 +14,15 @@ pub struct Records {
 
 impl Default for Records {
     fn default() -> Self {
-        let now_unix_time = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("clock may have gone backwards");
         Self {
-            begin_unix_time_secs: now_unix_time.as_secs(),
+            begin_unix_time_secs: now_unix_time().as_secs(),
             duration: Duration::default(),
             records: HashMap::default(),
         }
     }
 }
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Record {
     pub cpu_time: u32, // ms
 }

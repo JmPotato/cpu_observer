@@ -105,7 +105,7 @@ impl<T: Display + Send> Scheduler<T> {
         Ok(())
     }
 
-    pub fn _stop(&self) {
+    pub fn stop(&self) {
         self.task_sender.close_channel();
     }
 }
@@ -151,7 +151,7 @@ impl<S: Into<String>> Builder<S> {
             .build_future_pool();
         let remote = pool.remote().clone();
         Worker {
-            _pool: Arc::new(Mutex::new(Some(pool))),
+            pool: Arc::new(Mutex::new(Some(pool))),
             remote,
             task_counter: Arc::new(AtomicUsize::new(0)),
             pending_capacity: self.pending_capacity,
@@ -161,7 +161,7 @@ impl<S: Into<String>> Builder<S> {
 
 #[derive(Clone)]
 pub struct Worker {
-    _pool: Arc<Mutex<Option<ThreadPool<TaskCell>>>>,
+    pool: Arc<Mutex<Option<ThreadPool<TaskCell>>>>,
     remote: Remote<TaskCell>,
     task_counter: Arc<AtomicUsize>,
     pending_capacity: usize,
@@ -221,8 +221,8 @@ impl Worker {
         });
     }
 
-    fn _stop(&self) {
-        if let Some(pool) = self._pool.lock().unwrap().take() {
+    fn stop(&self) {
+        if let Some(pool) = self.pool.lock().unwrap().take() {
             pool.shutdown();
         }
     }
@@ -250,9 +250,9 @@ impl<T: Display + Send + 'static> LazyWorker<T> {
         self.scheduler.clone()
     }
 
-    pub fn _stop(&mut self) {
-        self.scheduler._stop();
-        self.worker._stop()
+    pub fn stop_worker(self) {
+        self.scheduler.stop();
+        self.worker.stop()
     }
 }
 

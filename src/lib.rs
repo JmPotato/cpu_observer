@@ -4,17 +4,21 @@ mod collector;
 mod local_storage;
 mod record;
 mod recorder;
+mod util;
 mod worker;
 
+use std::hash::{Hash, Hasher};
+use std::sync::Mutex;
 use std::{intrinsics::unlikely, sync::Arc};
 
-use local_storage::{LocalStorage, LocalStorageRef, STORAGE};
-
 pub use crate::collector::Collector;
+use crate::local_storage::{LocalStorage, LocalStorageRef, STORAGE};
+pub use crate::record::Records;
 use crate::recorder::thread;
 pub use crate::recorder::{
-    init_recorder, CollectorGuard, CollectorRegHandle, Recorder, RecorderBuilder,
+    init_recorder, CollectorGuard, CollectorRegHandle, Recorder, RecorderBuilder, Task,
 };
+pub use crate::worker::LazyWorker;
 use crate::worker::Scheduler;
 
 const MAX_THREAD_REGISTER_RETRY: u32 = 10;
@@ -61,6 +65,10 @@ impl ObserverTag {
             Guard
         })
     }
+
+    pub fn update(&self, name: impl Into<String>) {
+        *self.infos.name.lock().unwrap() = Some(name.into());
+    }
 }
 
 pub struct Guard;
@@ -97,9 +105,23 @@ impl ObserverTagFactory {
         Self { scheduler }
     }
 
+    #[allow(dead_code)]
+    fn new_for_test() -> Self {
+        use crate::worker::Builder as WorkerBuilder;
+        Self::new(
+            WorkerBuilder::new("test_worker")
+                .pending_capacity(256)
+                .create()
+                .lazy_build()
+                .scheduler(),
+        )
+    }
+
     pub fn new_tag(&self, name: impl Into<String>) -> ObserverTag {
         ObserverTag {
-            infos: Arc::new(TagInfos { name: name.into() }),
+            infos: Arc::new(TagInfos {
+                name: Mutex::new(Some(name.into())),
+            }),
             observer_tag_factory: self.clone(),
         }
     }
@@ -118,12 +140,61 @@ impl ObserverTagFactory {
 
 /// This structure is the actual internal data of [`ObserverTag`].
 /// It represents the context of the `ObserverTag`.
-#[derive(Debug, Default, Eq, PartialEq, Clone, Hash)]
+#[derive(Default, Debug)]
 pub struct TagInfos {
+    // TODO: do we really need a Mutex here?
+    name: Mutex<Option<String>>,
     // TODO: support more fields.
-    name: String,
+}
+
+impl PartialEq for TagInfos {
+    fn eq(&self, other: &Self) -> bool {
+        *self.name.lock().unwrap() == *other.name.lock().unwrap()
+    }
+}
+
+impl Eq for TagInfos {}
+
+impl Hash for TagInfos {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.lock().unwrap().hash(state);
+    }
 }
 
 // TODO: add some test cases for this module.
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_attach() {
+        // Use a thread created by ourself. If we use unit test thread directly,
+        // the test results may be affected by parallel testing.
+        std::thread::spawn(|| {
+            let observer_tag_factory = ObserverTagFactory::new_for_test();
+            let tag = ObserverTag {
+                infos: Arc::new(TagInfos::default()),
+                observer_tag_factory,
+            };
+            {
+                let _guard = tag.attach();
+                STORAGE.with(|s| {
+                    let ls = s.borrow_mut();
+                    let local_tag = ls.attached_tag.swap(None);
+                    assert!(local_tag.is_some());
+                    let tag_infos = local_tag.unwrap();
+                    assert_eq!(tag_infos, tag.infos);
+                    assert!(ls.attached_tag.swap(Some(tag_infos)).is_none());
+                });
+                // drop here.
+            }
+            STORAGE.with(|s| {
+                let ls = s.borrow_mut();
+                let local_tag = ls.attached_tag.swap(None);
+                assert!(local_tag.is_none());
+            });
+        })
+        .join()
+        .unwrap();
+    }
+}
