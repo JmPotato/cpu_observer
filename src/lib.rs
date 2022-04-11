@@ -14,12 +14,14 @@ use std::{intrinsics::unlikely, sync::Arc};
 pub use crate::collector::Collector;
 use crate::local_storage::{LocalStorage, LocalStorageRef, STORAGE};
 pub use crate::record::Records;
-use crate::recorder::thread;
 pub use crate::recorder::{
-    init_recorder, CollectorGuard, CollectorRegHandle, Recorder, RecorderBuilder, Task,
+    init_recorder, CollectorGuard, CollectorRegHandle, Recorder, RecorderBuilder,
 };
-pub use crate::worker::LazyWorker;
-use crate::worker::Scheduler;
+use crate::recorder::{thread, Task};
+use crate::worker::{LazyWorker, Scheduler};
+
+// This is used to export the internal worker type.
+pub type RecorderWorker = LazyWorker<Task>;
 
 const MAX_THREAD_REGISTER_RETRY: u32 = 10;
 

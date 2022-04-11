@@ -20,6 +20,7 @@ pub struct CPURecorder {
 
 impl SubRecorder for CPURecorder {
     fn tick(&mut self, records: &mut Records) {
+        #[allow(clippy::mutable_key_type)]
         let records = &mut records.records;
         let pid = thread::process_id();
         self.thread_stats.iter_mut().for_each(|(tid, thread_stat)| {
