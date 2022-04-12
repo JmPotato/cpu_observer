@@ -163,6 +163,12 @@ impl Hash for TagInfos {
     }
 }
 
+impl TagInfos {
+    pub fn name(&self) -> Option<String> {
+        self.name.lock().unwrap().clone()
+    }
+}
+
 // TODO: add some test cases for this module.
 #[cfg(test)]
 mod tests {
