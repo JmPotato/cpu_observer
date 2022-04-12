@@ -29,18 +29,9 @@ fn cpu_total(sys_time: i64, user_time: i64) -> f64 {
 }
 
 #[cfg(target_os = "linux")]
-pub mod linux {
-    #[inline]
-    pub fn cpu_total(stat: &super::FullStat) -> f64 {
-        super::cpu_total(stat.stime, stat.utime)
-    }
-}
-
-#[cfg(target_os = "linux")]
 mod imp {
-    use libc::c_int;
     use std::fs;
-    use std::io::{self, Error};
+    use std::io;
     use std::iter::FromIterator;
 
     pub use libc::pid_t as Pid;
@@ -85,8 +76,7 @@ mod imp {
             .filter_map(|task| {
                 let file_name = match task {
                     Ok(t) => t.file_name(),
-                    Err(e) => {
-                        error!("read task failed"; "pid" => pid, "err" => ?e);
+                    Err(_e) => {
                         return None;
                     }
                 };
@@ -94,15 +84,9 @@ mod imp {
                 match file_name.to_str() {
                     Some(tid) => match tid.parse() {
                         Ok(tid) => Some(tid),
-                        Err(e) => {
-                            error!("read task failed"; "pid" => pid, "err" => ?e);
-                            None
-                        }
+                        Err(_e) => None,
                     },
-                    None => {
-                        error!("read task failed"; "pid" => pid);
-                        None
-                    }
+                    None => None,
                 }
             })
             .collect())
@@ -110,74 +94,6 @@ mod imp {
 
     pub fn full_thread_stat(pid: Pid, tid: Pid) -> io::Result<FullStat> {
         pid::stat_task(pid, tid)
-    }
-
-    pub fn set_priority(pri: i32) -> io::Result<()> {
-        // Unsafe due to FFI.
-        unsafe {
-            let tid = libc::syscall(libc::SYS_gettid);
-            if libc::setpriority(libc::PRIO_PROCESS as u32, tid as u32, pri) != 0 {
-                let e = Error::last_os_error();
-                return Err(e);
-            }
-            Ok(())
-        }
-    }
-
-    pub fn get_priority() -> io::Result<i32> {
-        // Unsafe due to FFI.
-        unsafe {
-            let tid = libc::syscall(libc::SYS_gettid);
-            clear_errno();
-            let ret = libc::getpriority(libc::PRIO_PROCESS as u32, tid as u32);
-            if ret == -1 {
-                let e = Error::last_os_error();
-                if let Some(errno) = e.raw_os_error() {
-                    if errno != 0 {
-                        return Err(e);
-                    }
-                }
-            }
-            Ok(ret)
-        }
-    }
-
-    // Sadly the std lib does not have any support for setting `errno`, so we
-    // have to implement this ourselves.
-    extern "C" {
-        #[link_name = "__errno_location"]
-        fn errno_location() -> *mut c_int;
-    }
-
-    fn clear_errno() {
-        // Unsafe due to FFI.
-        unsafe {
-            *errno_location() = 0;
-        }
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use crate::sys::HIGH_PRI;
-        use std::io::ErrorKind;
-
-        #[test]
-        fn test_set_priority() {
-            // priority is a value in range -20 to 19, the default priority
-            // is 0, lower priorities cause more favorable scheduling.
-            assert_eq!(get_priority().unwrap(), 0);
-            set_priority(10).unwrap();
-            assert_eq!(get_priority().unwrap(), 10);
-
-            // only users who have `SYS_NICE_CAP` capability can increase priority.
-            let ret = set_priority(HIGH_PRI);
-            if let Err(e) = ret {
-                assert_eq!(e.kind(), ErrorKind::PermissionDenied);
-            } else {
-                assert_eq!(get_priority().unwrap(), HIGH_PRI);
-            }
-        }
     }
 }
 
